@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jobhunter-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - app.jobhunter.ai
+        - api.jobhunter.ai
+      secretName: jobhunter-tls
+  rules:
+    - host: app.jobhunter.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jobhunter-frontend
+                port:
+                  number: 3000
+    - host: api.jobhunter.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jobhunter-backend
+                port:
+                  number: 8000

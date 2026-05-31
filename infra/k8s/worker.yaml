@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobhunter-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jobhunter-worker
+  template:
+    metadata:
+      labels:
+        app: jobhunter-worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/your-org/jobhunter-backend:latest
+          command: ["celery", "-A", "app.tasks.celery_app.celery_app", "worker", "--loglevel=INFO"]
+          envFrom:
+            - secretRef:
+                name: jobhunter-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobhunter-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jobhunter-beat
+  template:
+    metadata:
+      labels:
+        app: jobhunter-beat
+    spec:
+      containers:
+        - name: beat
+          image: ghcr.io/your-org/jobhunter-backend:latest
+          command: ["celery", "-A", "app.tasks.celery_app.celery_app", "beat", "--loglevel=INFO"]
+          envFrom:
+            - secretRef:
+                name: jobhunter-secrets

@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobhunter-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jobhunter-frontend
+  template:
+    metadata:
+      labels:
+        app: jobhunter-frontend
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/your-org/jobhunter-frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: https://api.jobhunter.ai
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jobhunter-frontend
+spec:
+  selector:
+    app: jobhunter-frontend
+  ports:
+    - port: 3000
+      targetPort: 3000
