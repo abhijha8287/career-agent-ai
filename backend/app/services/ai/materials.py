@@ -102,25 +102,24 @@ class MaterialGenerationService:
 {title} at {company}
 
 ## Professional Summary
-{summary}
-
-This {focus.lower()} version positions the resume for {title} and emphasizes truthful evidence around: {", ".join(emphasized) or "role requirements"}.
+{summary} This {focus.lower()} version is tailored for {title} and keeps the wording focused on verified experience.
 
 ## Core Skills
 {", ".join(emphasized) or "Add verified skills from your resume"}
 
-## Relevant Experience
-- Delivered work aligned to {title} using {", ".join(emphasized[:6]) or "the required tools and practices"}.
-- Communicated tradeoffs, shipped measurable outcomes, and adapted to team priorities.
+## Experience Highlights
+- Built and delivered work aligned to {title}.
+- Applied {", ".join(emphasized[:6]) or "the required tools and practices"} in practical product or engineering contexts.
+- Communicated tradeoffs, collaborated with stakeholders, and shipped measurable outcomes.
 - Brings {experience_years} years of relevant experience based on the uploaded resume profile.
 
-## ATS Keywords Included
+## ATS Keywords
 {", ".join(keywords[:14]) or "No JD keywords detected"}
 
-## Keywords To Add Only If True
+## Add Only If True
 {", ".join(missing_keywords) or "No major keyword gaps detected"}
 
-Optimization rule: emphasize only skills and experience already present in the uploaded resume. Do not fabricate employers, projects, dates, credentials, or metrics.
+Optimization rule: keep every claim truthful. Do not invent employers, projects, dates, metrics, credentials, or tools.
 """
         return {"label": label, "focus": focus, "resume_markdown": resume}
 
@@ -132,8 +131,9 @@ Optimization rule: emphasize only skills and experience already present in the u
             company_sentence = "The role stood out because it connects directly to the kind of work I have been targeting."
         return (
             f"Dear {company} hiring team,\n\n"
-            f"I am excited to apply for {title}. My resume aligns with the role through {proof}. "
-            f"{company_sentence} I would welcome the chance to discuss how my experience can help your team deliver measurable outcomes.\n\n"
+            f"I am excited to apply for {title}. My background aligns with the role through {proof}. "
+            f"{company_sentence}\n\n"
+            "I would welcome the chance to discuss how my experience can help your team deliver measurable outcomes.\n\n"
             "Sincerely,\n"
             f"{name}"
         )

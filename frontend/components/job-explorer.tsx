@@ -233,7 +233,7 @@ export function JobExplorer() {
       </div>
 
       <aside className="space-y-4">
-        <section className="rounded-md border border-line bg-white p-4 shadow-sm">
+        <section className="min-w-0 rounded-md border border-line bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <FileUp size={18} />
             <h2 className="font-semibold">Resume Ranking</h2>
@@ -276,7 +276,7 @@ export function JobExplorer() {
             </p>
           )}
           {materials && (
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 min-w-0 space-y-4">
               <div className="flex flex-wrap gap-2">
                 {materials.versions.map((version, index) => (
                   <button
@@ -293,23 +293,27 @@ export function JobExplorer() {
                   </button>
                 ))}
               </div>
-              <div className="rounded-md border border-line bg-paper p-3">
+              <div className="min-w-0 rounded-md border border-line bg-paper p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-signal">
                   {materials.versions[activeVersion]?.focus}
                 </p>
-                <pre className="mt-2 max-h-72 whitespace-pre-wrap text-xs leading-5 text-ink/75">
+                <pre className="mt-3 block max-h-80 max-w-full overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words rounded-sm bg-white/60 p-3 font-sans text-xs leading-5 text-ink/75 [overflow-wrap:anywhere]">
                   {materials.versions[activeVersion]?.resume_markdown}
                 </pre>
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-sm font-semibold">Cover Letter</h3>
-                <pre className="mt-2 max-h-44 whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-ink/75">
+                <pre className="mt-2 block max-h-60 max-w-full overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words rounded-md border border-line bg-paper p-3 font-sans text-xs leading-5 text-ink/75 [overflow-wrap:anywhere]">
                   {materials.cover_letter}
                 </pre>
               </div>
-              <div className="space-y-2 text-xs text-ink/65">
-                <p>Matched: {materials.matched_keywords.slice(0, 8).join(", ") || "No direct keyword matches yet"}</p>
-                <p>Gaps: {materials.missing_keywords.slice(0, 8).join(", ") || "No major gaps"}</p>
+              <div className="min-w-0 space-y-2 text-xs text-ink/65">
+                <p className="break-words [overflow-wrap:anywhere]">
+                  Matched: {materials.matched_keywords.slice(0, 8).join(", ") || "No direct keyword matches yet"}
+                </p>
+                <p className="break-words [overflow-wrap:anywhere]">
+                  Gaps: {materials.missing_keywords.slice(0, 8).join(", ") || "No major gaps"}
+                </p>
               </div>
             </div>
           )}
