@@ -1,8 +1,16 @@
 "use client";
 
-import { FileUp, RefreshCw, Search } from "lucide-react";
+import { Download, FileUp, RefreshCw, Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CandidateProfile, GeneratedMaterials, generateMaterials, searchJobs, syncJobs, uploadResume } from "@/lib/api";
+import {
+  CandidateProfile,
+  GeneratedMaterials,
+  downloadMaterialPdf,
+  generateMaterials,
+  searchJobs,
+  syncJobs,
+  uploadResume
+} from "@/lib/api";
 import type { Job } from "@/types/domain";
 import { JobCard } from "@/components/job-card";
 
@@ -37,6 +45,7 @@ export function JobExplorer() {
   const [materialStatus, setMaterialStatus] = useState("Click the document icon on a job to generate tailored materials.");
   const [activeVersion, setActiveVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState("");
 
   const sourceLabel = source ? source[0].toUpperCase() + source.slice(1) : "All sources";
 
@@ -117,6 +126,29 @@ export function JobExplorer() {
       setMaterialStatus(error instanceof Error ? error.message : "Unable to generate materials");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handlePdfDownload(kind: "resume" | "cover") {
+    if (!materials || !selectedJob) {
+      return;
+    }
+    const activeResume = materials.versions[activeVersion];
+    const candidateName = candidateProfile?.full_name || "Candidate";
+    const baseName = `${candidateName}-${selectedJob.company}-${selectedJob.title}-${kind}`
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/(^-|-$)/g, "")
+      .toLowerCase();
+    const isResume = kind === "resume";
+    const title = isResume ? `${candidateName} - Tailored Resume` : `${candidateName} - Cover Letter`;
+    const subtitle = `${selectedJob.title} at ${selectedJob.company}`;
+    const body = isResume ? activeResume.resume_markdown : materials.cover_letter;
+    setPdfStatus(`Preparing ${isResume ? "resume" : "cover letter"} PDF...`);
+    try {
+      await downloadMaterialPdf(title, subtitle, body, `${baseName}.pdf`);
+      setPdfStatus(`${isResume ? "Resume" : "Cover letter"} PDF downloaded.`);
+    } catch (error) {
+      setPdfStatus(error instanceof Error ? error.message : "Unable to download PDF");
     }
   }
 
@@ -294,19 +326,36 @@ export function JobExplorer() {
                 ))}
               </div>
               <div className="min-w-0 rounded-md border border-line bg-paper p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-signal">
-                  {materials.versions[activeVersion]?.focus}
-                </p>
-                <pre className="mt-3 block max-h-80 max-w-full overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words rounded-sm bg-white/60 p-3 font-sans text-xs leading-5 text-ink/75 [overflow-wrap:anywhere]">
-                  {materials.versions[activeVersion]?.resume_markdown}
-                </pre>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-signal">
+                    {materials.versions[activeVersion]?.focus}
+                  </p>
+                  <button
+                    className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-moss transition hover:border-moss disabled:opacity-60"
+                    onClick={() => void handlePdfDownload("resume")}
+                    disabled={isLoading}
+                    type="button"
+                  >
+                    <Download size={13} /> PDF
+                  </button>
+                </div>
+                <DocumentPreview content={materials.versions[activeVersion]?.resume_markdown || ""} maxHeight="max-h-96" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold">Cover Letter</h3>
-                <pre className="mt-2 block max-h-60 max-w-full overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words rounded-md border border-line bg-paper p-3 font-sans text-xs leading-5 text-ink/75 [overflow-wrap:anywhere]">
-                  {materials.cover_letter}
-                </pre>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold">Cover Letter</h3>
+                  <button
+                    className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-moss transition hover:border-moss disabled:opacity-60"
+                    onClick={() => void handlePdfDownload("cover")}
+                    disabled={isLoading}
+                    type="button"
+                  >
+                    <Download size={13} /> PDF
+                  </button>
+                </div>
+                <DocumentPreview content={materials.cover_letter} maxHeight="max-h-72" />
               </div>
+              {pdfStatus && <p className="text-xs text-ink/55">{pdfStatus}</p>}
               <div className="min-w-0 space-y-2 text-xs text-ink/65">
                 <p className="break-words [overflow-wrap:anywhere]">
                   Matched: {materials.matched_keywords.slice(0, 8).join(", ") || "No direct keyword matches yet"}
@@ -320,5 +369,48 @@ export function JobExplorer() {
         </section>
       </aside>
     </section>
+  );
+}
+
+function DocumentPreview({ content, maxHeight }: { content: string; maxHeight: string }) {
+  const lines = content.split("\n");
+  return (
+    <div
+      className={`mt-3 ${maxHeight} max-w-full overflow-y-auto overflow-x-hidden rounded-md border border-line bg-white p-4 text-sm leading-6 text-ink/80 shadow-sm`}
+    >
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={index} className="h-3" />;
+        }
+        if (trimmed.startsWith("# ")) {
+          return (
+            <h3 key={index} className="break-words text-lg font-semibold leading-6 text-ink [overflow-wrap:anywhere]">
+              {trimmed.slice(2)}
+            </h3>
+          );
+        }
+        if (trimmed.startsWith("## ")) {
+          return (
+            <h4 key={index} className="mt-3 break-words text-xs font-semibold uppercase tracking-wide text-moss [overflow-wrap:anywhere]">
+              {trimmed.slice(3)}
+            </h4>
+          );
+        }
+        if (trimmed.startsWith("- ")) {
+          return (
+            <div key={index} className="mt-1 flex gap-2">
+              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-signal" />
+              <p className="min-w-0 break-words text-sm [overflow-wrap:anywhere]">{trimmed.slice(2)}</p>
+            </div>
+          );
+        }
+        return (
+          <p key={index} className="mt-2 break-words text-sm [overflow-wrap:anywhere]">
+            {trimmed}
+          </p>
+        );
+      })}
+    </div>
   );
 }

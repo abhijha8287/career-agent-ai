@@ -255,12 +255,15 @@ After uploading a resume, click the document icon on any job card. The app will:
 - Compare those keywords against the uploaded resume profile.
 - Generate `resume_v1`, `resume_v2`, and `resume_v3`.
 - Generate a tailored cover letter, recruiter message, LinkedIn message, and follow-up email.
+- Preview generated resume and cover letter in a formatted document view.
+- Download the tailored resume or cover letter as a styled PDF.
 - Store each generated resume version in PostgreSQL when the database is available.
 
 Backend endpoint:
 
 ```text
 POST /api/materials/generate
+POST /api/materials/pdf
 ```
 
 Request body shape:

@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.routes.candidates import _candidates
 from app.db.session import get_db
 from app.models.domain import GeneratedMaterial
-from app.schemas.api import GeneratedMaterialOut, MaterialRequest
+from app.schemas.api import GeneratedMaterialOut, MaterialPdfRequest, MaterialRequest
 from app.services.ai.materials import MaterialGenerationService
+from app.services.pdf_generator import generate_document_pdf
 from app.services.jobs_repository import JobsRepository
 
 router = APIRouter()
@@ -44,6 +45,17 @@ def generate_materials(payload: MaterialRequest, db: Session = Depends(get_db)) 
     materials = MaterialGenerationService().generate(candidate, job_payload)
     _store_versions(db, payload, job_payload, materials)
     return GeneratedMaterialOut(**materials)
+
+
+@router.post("/pdf")
+def generate_material_pdf(payload: MaterialPdfRequest) -> Response:
+    pdf = generate_document_pdf(payload.document_title, payload.document_subtitle, payload.document_body)
+    filename = payload.filename.replace('"', "").replace("\\", "-").replace("/", "-")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 def _store_versions(db: Session, payload: MaterialRequest, job: dict, materials: dict) -> None:

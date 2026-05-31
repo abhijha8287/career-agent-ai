@@ -1,4 +1,5 @@
 from app.services.ai.materials import MaterialGenerationService
+from app.services.pdf_generator import generate_document_pdf
 
 
 def test_generates_three_resume_versions_with_keywords() -> None:
@@ -25,3 +26,15 @@ def test_generates_three_resume_versions_with_keywords() -> None:
     assert len(materials["versions"]) == 3
     assert [version["label"] for version in materials["versions"]] == ["resume_v1", "resume_v2", "resume_v3"]
     assert "AI Product Engineer" in materials["cover_letter"]
+
+
+def test_generates_downloadable_pdf_bytes() -> None:
+    pdf = generate_document_pdf(
+        "Asha Patel - Tailored Resume",
+        "AI Product Engineer at Acme",
+        "# Asha Patel\n\n## Professional Summary\nPython engineer\n\n- Built APIs with React and PostgreSQL.",
+    )
+
+    assert pdf.startswith(b"%PDF-1.4")
+    assert b"/Type /Catalog" in pdf
+    assert len(pdf) > 1000

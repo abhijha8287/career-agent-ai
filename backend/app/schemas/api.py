@@ -96,6 +96,13 @@ class GeneratedMaterialOut(BaseModel):
     versions: list[ResumeVersionOut]
 
 
+class MaterialPdfRequest(BaseModel):
+    document_title: str
+    document_subtitle: str = ""
+    document_body: str
+    filename: str = "application-material.pdf"
+
+
 class ApplicationCreate(BaseModel):
     candidate_id: str
     job_id: str
