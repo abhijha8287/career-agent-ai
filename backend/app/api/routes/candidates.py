@@ -3,7 +3,7 @@ from uuid import uuid4
 from fastapi import APIRouter, File, UploadFile
 
 from app.schemas.api import CandidateCreate, CandidateOut
-from app.services.resume_parser import extract_skills, parse_resume, summarize_resume
+from app.services.resume_parser import extract_candidate_name, extract_skills, parse_resume, summarize_resume
 
 router = APIRouter()
 
@@ -30,16 +30,17 @@ def get_candidate(candidate_id: str) -> CandidateOut:
 @router.post("/resume", response_model=CandidateOut)
 async def upload_resume(
     resume: UploadFile = File(...),
-    full_name: str = "Resume User",
+    full_name: str | None = None,
     email: str = "resume-user@example.com",
 ) -> CandidateOut:
     content = await resume.read()
     resume_text = parse_resume(resume.filename or "resume.txt", content)
     skills = extract_skills(resume_text)
+    candidate_name = full_name or extract_candidate_name(resume_text)
     candidate = {
         "id": str(uuid4()),
         "email": email,
-        "full_name": full_name,
+        "full_name": candidate_name,
         "linkedin_url": None,
         "github_url": None,
         "portfolio_url": None,

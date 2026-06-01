@@ -58,6 +58,22 @@ def summarize_resume(text: str) -> str:
     return compact[:500]
 
 
+def extract_candidate_name(text: str, fallback: str = "Candidate") -> str:
+    for raw_line in text.splitlines()[:12]:
+        line = re.sub(r"\s+", " ", raw_line).strip(" -|•\t")
+        lowered = line.lower()
+        if not line or len(line) > 60:
+            continue
+        if any(token in lowered for token in ["@", "linkedin", "github", "resume", "curriculum", "phone", "email"]):
+            continue
+        if re.search(r"\d", line):
+            continue
+        words = line.split()
+        if 2 <= len(words) <= 5 and all(re.search(r"[A-Za-z]", word) for word in words):
+            return " ".join(word[:1].upper() + word[1:] for word in words)
+    return fallback
+
+
 def _parse_pdf(content: bytes) -> str:
     reader = PdfReader(BytesIO(content))
     return "\n".join(page.extract_text() or "" for page in reader.pages)

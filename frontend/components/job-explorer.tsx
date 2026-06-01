@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileText, FileUp, RefreshCw, Search } from "lucide-react";
+import { Download, FileText, FileUp, Pencil, RefreshCw, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   CandidateProfile,
@@ -182,6 +182,26 @@ export function JobExplorer() {
     } catch (error) {
       setPdfStatus(error instanceof Error ? error.message : "Unable to download PDF");
     }
+  }
+
+  function updateActiveResume(content: string) {
+    setMaterials((current) => {
+      if (!current) {
+        return current;
+      }
+      const versions = current.versions.map((version, index) =>
+        index === activeVersion ? { ...version, resume_markdown: content } : version
+      );
+      return {
+        ...current,
+        resume_markdown: activeVersion === 0 ? content : current.resume_markdown,
+        versions
+      };
+    });
+  }
+
+  function updateCoverLetter(content: string) {
+    setMaterials((current) => (current ? { ...current, cover_letter: content } : current));
   }
 
   useEffect(() => {
@@ -378,6 +398,8 @@ export function JobExplorer() {
         pdfStatus={pdfStatus}
         selectedJob={selectedJob}
         onDownload={handlePdfDownload}
+        onResumeChange={updateActiveResume}
+        onCoverChange={updateCoverLetter}
         onVersionChange={setActiveVersion}
       />
     </section>
@@ -392,6 +414,8 @@ function ApplicationStudio({
   pdfStatus,
   selectedJob,
   onDownload,
+  onResumeChange,
+  onCoverChange,
   onVersionChange
 }: {
   activeVersion: number;
@@ -401,8 +425,13 @@ function ApplicationStudio({
   pdfStatus: string;
   selectedJob: Job | null;
   onDownload: (kind: "resume" | "cover") => void;
+  onResumeChange: (content: string) => void;
+  onCoverChange: (content: string) => void;
   onVersionChange: (index: number) => void;
 }) {
+  const [editingResume, setEditingResume] = useState(false);
+  const [editingCover, setEditingCover] = useState(false);
+
   return (
     <section className="min-w-0 rounded-md border border-line bg-white shadow-sm lg:col-span-2">
       <div className="flex flex-col gap-3 border-b border-line p-4 md:flex-row md:items-center md:justify-between">
@@ -479,13 +508,49 @@ function ApplicationStudio({
                 {materials.versions[activeVersion]?.focus}
               </p>
             </div>
-            <DocumentPreview content={materials.versions[activeVersion]?.resume_markdown || ""} maxHeight="max-h-[620px]" />
+            <div className="mt-3 flex justify-end">
+              <button
+                className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-moss transition hover:border-moss"
+                onClick={() => setEditingResume((value) => !value)}
+                type="button"
+              >
+                <Pencil size={13} /> {editingResume ? "Preview" : "Edit Resume"}
+              </button>
+            </div>
+            {editingResume ? (
+              <textarea
+                className="mt-3 min-h-[620px] w-full resize-y rounded-md border border-line bg-white p-4 font-mono text-xs leading-5 text-ink outline-none focus:border-moss"
+                value={materials.versions[activeVersion]?.resume_markdown || ""}
+                onChange={(event) => onResumeChange(event.target.value)}
+                aria-label="Edit generated resume"
+              />
+            ) : (
+              <DocumentPreview content={materials.versions[activeVersion]?.resume_markdown || ""} maxHeight="max-h-[620px]" />
+            )}
           </div>
 
           <div className="min-w-0 space-y-4">
             <div className="rounded-md border border-line bg-paper p-3">
-              <h3 className="text-sm font-semibold">Cover Letter</h3>
-              <DocumentPreview content={materials.cover_letter} maxHeight="max-h-[430px]" />
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Cover Letter</h3>
+                <button
+                  className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-moss transition hover:border-moss"
+                  onClick={() => setEditingCover((value) => !value)}
+                  type="button"
+                >
+                  <Pencil size={13} /> {editingCover ? "Preview" : "Edit Cover"}
+                </button>
+              </div>
+              {editingCover ? (
+                <textarea
+                  className="mt-3 min-h-[430px] w-full resize-y rounded-md border border-line bg-white p-4 font-mono text-xs leading-5 text-ink outline-none focus:border-moss"
+                  value={materials.cover_letter}
+                  onChange={(event) => onCoverChange(event.target.value)}
+                  aria-label="Edit generated cover letter"
+                />
+              ) : (
+                <DocumentPreview content={materials.cover_letter} maxHeight="max-h-[430px]" />
+              )}
             </div>
             <div className="rounded-md border border-line bg-paper p-4">
               <h3 className="text-sm font-semibold">Common Missing Section</h3>
