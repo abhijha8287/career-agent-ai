@@ -46,6 +46,9 @@ export function JobExplorer() {
   const [activeVersion, setActiveVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [pdfStatus, setPdfStatus] = useState("");
+  const [jdTitle, setJdTitle] = useState("");
+  const [jdCompany, setJdCompany] = useState("");
+  const [jdText, setJdText] = useState("");
 
   const sourceLabel = source ? source[0].toUpperCase() + source.slice(1) : "All sources";
 
@@ -128,6 +131,34 @@ export function JobExplorer() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleGenerateFromJd() {
+    if (!candidateProfile) {
+      setMaterialStatus("Upload a resume first, then paste a job description.");
+      return;
+    }
+    if (!jdText.trim()) {
+      setMaterialStatus("Paste the job description before generating materials.");
+      return;
+    }
+    const jdJob: Job = {
+      id: "custom-jd",
+      source: "custom",
+      external_job_id: "custom-jd",
+      title: jdTitle.trim() || "Target Role",
+      company: jdCompany.trim() || "Target Company",
+      location: null,
+      salary_min: null,
+      salary_max: null,
+      employment_type: "full_time",
+      required_skills: [],
+      preferred_skills: [],
+      apply_url: "custom-jd",
+      cleaned_description: jdText,
+      company_details: { source: "uploaded_jd" }
+    };
+    await handleGenerateMaterials(jdJob);
   }
 
   async function handlePdfDownload(kind: "resume" | "cover") {
@@ -295,6 +326,40 @@ export function JobExplorer() {
           )}
         </section>
         <section className="rounded-md border border-line bg-white p-4 shadow-sm">
+          <h2 className="font-semibold">Tailor From JD</h2>
+          <div className="mt-4 space-y-3">
+            <input
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-moss"
+              value={jdTitle}
+              onChange={(event) => setJdTitle(event.target.value)}
+              placeholder="Role title"
+              aria-label="JD role title"
+            />
+            <input
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-moss"
+              value={jdCompany}
+              onChange={(event) => setJdCompany(event.target.value)}
+              placeholder="Company"
+              aria-label="JD company"
+            />
+            <textarea
+              className="min-h-44 w-full resize-y rounded-md border border-line bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-moss"
+              value={jdText}
+              onChange={(event) => setJdText(event.target.value)}
+              placeholder="Paste the full job description here"
+              aria-label="Job description"
+            />
+            <button
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-signal px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-signal/90 disabled:opacity-60"
+              onClick={() => void handleGenerateFromJd()}
+              disabled={isLoading}
+              type="button"
+            >
+              <FileText size={15} /> Generate From Resume + JD
+            </button>
+          </div>
+        </section>
+        <section className="rounded-md border border-line bg-white p-4 shadow-sm">
           <h2 className="font-semibold">Live Ingestion</h2>
           <div className="mt-4 space-y-3 text-sm leading-6 text-ink/75">
             <p>Jobs are loaded from PostgreSQL through the backend search API.</p>
@@ -378,13 +443,13 @@ function ApplicationStudio({
 
       {!materials ? (
         <div className="grid gap-4 p-4 md:grid-cols-3">
-          {["Upload resume", "Choose a job", "Generate package"].map((step, index) => (
+          {["Upload resume", "Paste JD or choose job", "Generate package"].map((step, index) => (
             <div key={step} className="rounded-md border border-line bg-paper p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-moss">Step {index + 1}</p>
               <p className="mt-2 font-semibold">{step}</p>
               <p className="mt-2 text-sm leading-6 text-ink/65">
                 {index === 0 && "Use the upload panel to build your candidate profile."}
-                {index === 1 && "Pick a relevant opportunity from the ranked list."}
+                {index === 1 && "Paste a JD in the sidebar or pick a relevant opportunity from the ranked list."}
                 {index === 2 && "Click the document icon on a job card to create resume and cover letter drafts."}
               </p>
             </div>
@@ -423,7 +488,10 @@ function ApplicationStudio({
               <DocumentPreview content={materials.cover_letter} maxHeight="max-h-[430px]" />
             </div>
             <div className="rounded-md border border-line bg-paper p-4">
-              <h3 className="text-sm font-semibold">Keyword Alignment</h3>
+              <h3 className="text-sm font-semibold">Common Missing Section</h3>
+              <p className="mt-1 text-xs leading-5 text-ink/55">
+                These are JD keywords that are not clearly present in the uploaded resume. Add them only if they are truthful.
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {(materials.matched_keywords.slice(0, 10).length ? materials.matched_keywords.slice(0, 10) : ["No direct keyword matches yet"]).map(
                   (keyword) => (
@@ -433,9 +501,12 @@ function ApplicationStudio({
                   )
                 )}
               </div>
-              <p className="mt-3 break-words text-xs leading-5 text-ink/55 [overflow-wrap:anywhere]">
-                Gaps: {materials.missing_keywords.slice(0, 8).join(", ") || "No major gaps"}
-              </p>
+              <div className="mt-3 rounded-md border border-line bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-signal">Missing From Resume</p>
+                <p className="mt-2 break-words text-sm leading-6 text-ink/70 [overflow-wrap:anywhere]">
+                  {materials.missing_keywords.slice(0, 12).join(", ") || "No major gaps found against this JD."}
+                </p>
+              </div>
               {pdfStatus && <p className="mt-3 text-xs font-medium text-moss">{pdfStatus}</p>}
             </div>
           </div>
