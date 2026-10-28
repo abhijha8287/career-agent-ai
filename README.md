@@ -1,42 +1,80 @@
-# JobHunter AI
+# JobHunter AI (career-agent-ai)
 
-JobHunter AI is a production-ready SaaS scaffold for AI-powered job, internship, and freelance opportunity discovery. It ingests public ATS job feeds, stores normalized jobs in PostgreSQL, exposes search APIs, ranks opportunities, generates application materials, and provides a Next.js dashboard for users.
+A job-discovery app that collects openings from public ATS feeds and job boards, ranks them against your resume, and drafts tailored resumes and cover letters.
 
-## Current Features
+## Why this exists
+Job searching means checking dozens of company career pages by hand. This pulls them into one database, scores each role against a profile, and prepares application material for the ones worth applying to.
 
-- Next.js, React, TypeScript, and Tailwind frontend.
-- FastAPI backend with OpenAPI docs.
-- PostgreSQL-backed job storage.
-- Real ATS ingestion for:
-  - Greenhouse
-  - Lever
-  - Ashby
-  - Workable
-  - Recruitee
-  - Personio
-- Reddit jobs and freelance posts from `r/forhire`, `r/jobs`, `r/remotework`, and `r/remotejobs`.
-- Playwright-based enterprise ATS crawlers for Workday, SuccessFactors, iCIMS, and Taleo.
-- Personalized AI ranking with semantic, skill, experience, and location scores.
-- Resume upload for PDF, DOCX, and TXT files.
-- Job-click resume generation with JD extraction, keyword extraction, ATS optimization, three stored resume versions, and cover letter output.
-- Deduplication by `source`, `external_job_id`, `company`, and `apply_url`.
-- Celery worker plus Celery Beat scheduled sync every 30 minutes.
-- Manual sync endpoint: `POST /api/jobs/sync`.
-- Search endpoint backed by stored jobs: `POST /api/jobs/search`.
-- AI matching and application material generation service boundaries.
-- Docker Compose, Dockerfiles, Kubernetes manifests, and GitHub Actions CI.
-- Architecture, API, schema, and deployment docs in `docs/`.
+## What it does
+- Ingests jobs from Greenhouse, Lever, Ashby, Workable, Recruitee and Personio feeds
+- Crawls Workday, SuccessFactors, iCIMS and Taleo career sites with Playwright
+- Collects job and freelance posts from selected subreddits
+- De-duplicates by source, job ID, company and apply URL; syncs every 30 minutes with Celery Beat
+- Parses uploaded resumes (PDF, DOCX, TXT) and ranks jobs by semantic, skill, experience and location fit
+- For a chosen job: extracts the description's keywords and generates three resume versions and a cover letter
 
-## Project Structure
-
-```text
-backend/              FastAPI API, SQLAlchemy models, ATS connectors, Celery tasks, tests
-frontend/             Next.js application dashboard
-infra/k8s/            Kubernetes manifests
-docs/                 Architecture, API, database schema, deployment guide
-docker-compose.yml    Local full-stack services
-.github/workflows/    CI pipeline
+## Project structure
 ```
+career-agent-ai/
+├── backend/
+│   ├── app/api/       FastAPI routes
+│   ├── app/services/  Ingestion, ranking, resume generation
+│   ├── app/tasks/     Celery sync jobs
+│   ├── app/models/    Database tables
+│   ├── app/schemas/   Request and response models
+│   ├── app/db/        Database session setup
+│   ├── app/core/      Settings
+│   └── tests/         pytest suite
+├── frontend/          Next.js app
+├── infra/k8s/         Kubernetes manifests
+├── docs/              Architecture, API, schema, deployment
+├── .github/workflows/ CI pipeline
+└── docker-compose.yml Full local stack
+```
+
+## Getting started
+Requirements: Docker and Docker Compose (or Python 3.11+, Node.js 18+, PostgreSQL and Redis to run manually).
+```bash
+git clone https://github.com/abhijha8287/career-agent-ai.git
+cd career-agent-ai
+cp backend/.env.example backend/.env
+docker compose up --build
+```
+| Service | Address |
+|:--|:--|
+| Frontend | http://localhost:3000 |
+| API docs | http://localhost:8000/docs |
+| Health check | http://localhost:8000/health |
+
+Compose starts Postgres, Redis, Elasticsearch, the backend, a Celery worker, Celery Beat and the frontend.
+
+Run without Docker:
+```bash
+cd backend && python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+cd ../frontend && npm install && npm run dev
+```
+
+## Configuration
+| Variable | Purpose |
+|:--|:--|
+| `DATABASE_URL`, `REDIS_URL`, `ELASTICSEARCH_URL` | Data stores |
+| `CORS_ORIGINS` | Allowed frontend URLs |
+| `GREENHOUSE_BOARDS`, `LEVER_SITES`, `ASHBY_BOARDS`, `WORKABLE_ACCOUNTS`, `RECRUITEE_COMPANIES`, `PERSONIO_COMPANIES` | Which company feeds to pull |
+| `WORKDAY_CAREER_URLS`, `SUCCESSFACTORS_CAREER_URLS`, `ICIMS_CAREER_URLS`, `TALEO_CAREER_URLS` | Career sites to crawl |
+| `REDDIT_SUBREDDITS`, `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT` | Reddit source |
+| `OPENAI_EMBEDDING_MODEL` | Embedding model for ranking |
+| `APP_ENV` | Environment name |
+
+## Tests
+```bash
+cd backend && pytest
+cd frontend && npm run typecheck && npm run build
+```
+
+## Tech stack
+Python, FastAPI, PostgreSQL, Redis, Celery, Elasticsearch, Playwright, pypdf, python-docx, OpenAI embeddings, Next.js, React, TypeScript, Tailwind CSS, Docker, Kubernetes, GitHub Actions
 
 ## Configure ATS Ingestion
 
@@ -77,95 +115,6 @@ cd backend
 ```
 
 The Workday, SuccessFactors, iCIMS, and Taleo connectors open configured career URLs with Playwright, intercept network JSON responses, extract jobs from API payloads, and normalize them into the same PostgreSQL job table.
-
-## Run With Docker Compose
-
-From the repository root:
-
-```powershell
-docker compose up --build
-```
-
-Default URLs:
-
-- Frontend: http://localhost:3000
-- Backend API docs: http://localhost:8000/docs
-- Health check: http://localhost:8000/health
-
-Docker Compose starts:
-
-- `postgres`
-- `redis`
-- `elasticsearch`
-- `backend`
-- `worker`
-- `beat`
-- `frontend`
-
-The `beat` service runs the ATS sync task every 30 minutes.
-
-## Run Manually
-
-If ports `3000` or `8000` are already in use, choose different ports. During development in this workspace, the app has been run on frontend port `3010` and backend port `8010`.
-
-### Backend
-
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8010
-```
-
-Backend URLs:
-
-- API docs: http://127.0.0.1:8010/docs
-- Health: http://127.0.0.1:8010/health
-
-### Frontend
-
-```powershell
-cd frontend
-npm.cmd install
-$env:NEXT_PUBLIC_API_URL="http://localhost:8010"
-npm.cmd run dev -- --port 3010
-```
-
-Frontend URL:
-
-- http://127.0.0.1:3010
-
-If you see `500 Internal Server Error` on port `3010`, stop the old dev server, clear the Next cache, and restart:
-
-```powershell
-netstat -ano | Select-String ':3010'
-Stop-Process -Id <PID_FROM_LISTENING_ROW> -Force
-cd frontend
-npm.cmd run clean
-npm.cmd run dev:3010
-```
-
-Keep that terminal open while using the app.
-
-### Celery Worker And Beat
-
-Run these in separate terminals after Redis is available:
-
-```powershell
-cd backend
-.\.venv\Scripts\python.exe -m celery -A app.tasks.celery_app.celery_app worker --loglevel=INFO
-```
-
-```powershell
-cd backend
-.\.venv\Scripts\python.exe -m celery -A app.tasks.celery_app.celery_app beat --loglevel=INFO
-```
-
-On Windows, the app config uses Celery's `solo` worker pool to avoid `PermissionError: [WinError 5] Access is denied` from the default prefork pool. If you still pass flags manually, use:
-
-```powershell
-.\.venv\Scripts\python.exe -m celery -A app.tasks.celery_app.celery_app worker --loglevel=INFO --pool=solo --concurrency=1
-```
 
 ## Sync And Search Jobs
 
@@ -278,24 +227,6 @@ Request body shape:
 ```
 
 For live fallback jobs that are not stored yet, the frontend sends the selected job payload directly. For stored jobs, the backend can load the job by `job_id`.
-
-## Validation
-
-Backend:
-
-```powershell
-python -m compileall backend\app backend\tests
-cd backend
-.\.venv\Scripts\python.exe -m pytest
-```
-
-Frontend:
-
-```powershell
-cd frontend
-npm.cmd run typecheck
-npm.cmd run build
-```
 
 ## Deployment
 
